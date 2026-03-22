@@ -11,6 +11,11 @@
 
 </div>
 
+<div align="center">
+  <img src="docs/screenshots/dashboard-dark.png" alt="Token Tracker Dashboard" width="800" />
+  <br/><br/>
+</div>
+
 ---
 
 ## Two Ways to Use
@@ -22,6 +27,10 @@ Download `TokenTrackerBar.dmg` from the [latest release](https://github.com/mm78
 - Lives in your menu bar — click to see usage stats
 - Auto-syncs data from all supported CLI tools
 - No terminal, no Node.js, no setup required
+
+<div align="center">
+  <img src="docs/screenshots/menubar.jpeg" alt="Menu Bar App" width="420" />
+</div>
 
 ### Option B: CLI + Web Dashboard
 
@@ -42,6 +51,10 @@ tokentracker doctor       # Health check
 ```
 
 ---
+
+<div align="center">
+  <img src="docs/screenshots/dashboard-light.png" alt="Web Dashboard" width="800" />
+</div>
 
 ## Features
 
