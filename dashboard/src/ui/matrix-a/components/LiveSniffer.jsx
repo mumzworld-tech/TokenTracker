@@ -48,9 +48,9 @@ export const LiveSniffer = () => {
   }, [shouldRun]);
 
   return (
-    <div className="font-matrix text-caption text-matrix-muted space-y-2 h-full flex flex-col justify-end">
+    <div className="font-mono text-[11px] text-matrix-muted space-y-1.5 h-full flex flex-col justify-end py-1">
       {logs.map((log, idx) => (
-        <div key={idx} className="animate-pulse border-l-2 border-matrix-ghost pl-2 truncate">
+        <div key={idx} className="animate-pulse border-l-2 border-[#00FF41]/20 pl-2 truncate opacity-80">
           {log}
         </div>
       ))}

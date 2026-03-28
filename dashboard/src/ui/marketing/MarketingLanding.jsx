@@ -323,7 +323,7 @@ export function MarketingLanding({
         </section>
 
         <section className="py-20 lg:py-32">
-          <div className="mx-auto max-w-5xl px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-16 lg:gap-24 items-start">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-16 lg:gap-24 items-start">
             <div className="max-w-md">
               <p className="text-xs font-bold tracking-widest uppercase text-oai-brand-500 mb-4">
                 {copy("landing.v2.compare.kicker")}
