@@ -1,5 +1,7 @@
 import React, { Suspense, useMemo } from "react";
 import { useLocation } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
 import { ThemeProvider } from "./ui/foundation/ThemeProvider.jsx";
 import { useInsforgeAuth } from "./contexts/InsforgeAuthContext.jsx";
@@ -124,6 +126,8 @@ export default function App() {
         <LoginModalProvider>
           {content}
           <LoginModal />
+          <Analytics />
+          <SpeedInsights />
         </LoginModalProvider>
       </ThemeProvider>
     </ErrorBoundary>
