@@ -4,6 +4,7 @@
 
 **Track AI Token Usage Across All Your CLI Tools**
 
+[![Website](https://img.shields.io/badge/Website-token.rynn.me-blue.svg)](https://token.rynn.me)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![npm version](https://img.shields.io/npm/v/tokentracker-cli.svg)](https://www.npmjs.com/package/tokentracker-cli)
 [![Node.js Support](https://img.shields.io/badge/Node.js-≥20-brightgreen.svg)](https://nodejs.org/)
@@ -160,7 +161,7 @@ Clawd character design belongs to Anthropic. This is a community project with no
 
 <div align="center">
   <b>Token Tracker</b> — Quantify your AI output.<br/>
-  Made by developers, for developers.
+  <a href="https://token.rynn.me">token.rynn.me</a> · Made by developers, for developers.
 </div>
 
 ## Recent UI Updates

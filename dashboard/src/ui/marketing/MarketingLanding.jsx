@@ -70,6 +70,9 @@ export function MarketingLanding({
   onCopyInstallCommand,
 }) {
   const reduceMotion = useReducedMotion();
+  const isLocalMode =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
   const { signedIn, loading: authLoading } = useInsforgeAuth();
 
   const modelAgentLabels = useMemo(
@@ -116,22 +119,24 @@ export function MarketingLanding({
               <HeaderGithubStar />
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-            <Link
-              to={getDashboardEntryPath()}
-              className={cn(
-                buttonClass(signedIn || authLoading ? "default" : "ghost", "sm"),
-                "no-underline px-5 rounded-full group",
-                signedIn || authLoading
-                  ? "shadow-sm ring-1 ring-white/10"
-                  : "ring-1 ring-oai-gray-700",
-              )}
-            >
-              {copy("landing.v2.cta.primary")}
-              <span className="ml-2 inline-block transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
-            </Link>
-            <InsforgeUserHeaderControls />
-          </div>
+          {isLocalMode && (
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+              <Link
+                to={getDashboardEntryPath()}
+                className={cn(
+                  buttonClass(signedIn || authLoading ? "default" : "ghost", "sm"),
+                  "no-underline px-5 rounded-full group",
+                  signedIn || authLoading
+                    ? "shadow-sm ring-1 ring-white/10"
+                    : "ring-1 ring-oai-gray-700",
+                )}
+              >
+                {copy("landing.v2.cta.primary")}
+                <span className="ml-2 inline-block transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
+              </Link>
+              <InsforgeUserHeaderControls />
+            </div>
+          )}
         </div>
       </header>
 
@@ -410,12 +415,14 @@ export function MarketingLanding({
             >
               {copy("landing.v2.nav.github")}
             </a>
-            <Link
-              to={signInUrl}
-              className="font-medium text-oai-brand-500 hover:text-oai-brand-400 transition-colors"
-            >
-              {copy("landing.cta.primary")} &rarr;
-            </Link>
+            {isLocalMode && (
+              <Link
+                to={signInUrl}
+                className="font-medium text-oai-brand-500 hover:text-oai-brand-400 transition-colors"
+              >
+                {copy("landing.cta.primary")} &rarr;
+              </Link>
+            )}
           </div>
         </div>
       </footer>
