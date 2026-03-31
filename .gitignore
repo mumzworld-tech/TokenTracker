@@ -30,8 +30,6 @@ index.scip
 .vercel
 .env*.local
 
-# Local-only canvas focus output
-architecture.focus.canvas
 .worktrees/
 
 # OpenMemory - IDE/Assistant specific rules

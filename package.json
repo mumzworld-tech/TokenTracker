@@ -21,9 +21,6 @@
     "access": "public"
   },
   "scripts": {
-    "architecture:canvas": "node scripts/ops/architecture-canvas.cjs",
-    "architecture:canvas:focus": "node scripts/ops/architecture-canvas.cjs --focus",
-    "architecture:canvas:list-modules": "node scripts/ops/architecture-canvas.cjs --list-modules",
     "ci:local": "npm test && npm run validate:copy && npm run validate:ui-hardcode && npm run validate:guardrails && node --test test/architecture-guardrails.test.js && npm --prefix dashboard run build",
     "copy:pull": "node scripts/copy-sync.cjs pull",
     "copy:push": "node scripts/copy-sync.cjs push",
