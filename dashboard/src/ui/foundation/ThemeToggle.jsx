@@ -1,151 +1,111 @@
-import React from "react";
-import { motion, useReducedMotion } from "motion/react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
-/**
- * 主题切换按钮组件
- * 使用 useTheme hook 获取当前主题并切换 light/dark 模式
- */
-export function ThemeToggle({
-  theme,
-  onToggle,
-  className = "",
-  size = 36,
-  iconSize = 20,
-}) {
-  const shouldReduceMotion = useReducedMotion();
-  const isDark = theme === "dark";
+const ICON_SIZE = 18;
 
-  const handleClick = () => {
-    onToggle?.(isDark ? "light" : "dark");
-  };
-
-  const buttonStyles = {
-    width: size,
-    height: size,
-    borderRadius: 8,
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "var(--oai-gray-600)",
-    transition: "background-color 150ms ease, color 150ms ease",
-  };
-
-  const hoverStyles = {
-    backgroundColor: "var(--oai-gray-100)",
-    color: "var(--oai-black)",
-  };
-
-  // 太阳图标（亮色模式时显示）
-  const SunIcon = () => (
-    <svg
-      aria-hidden="true"
-      width={iconSize}
-      height={iconSize}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
+function SunIcon() {
+  return (
+    <svg aria-hidden width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2" />
-      <path d="M12 20v2" />
-      <path d="m4.93 4.93 1.41 1.41" />
-      <path d="m17.66 17.66 1.41 1.41" />
-      <path d="M2 12h2" />
-      <path d="M20 12h2" />
-      <path d="m6.34 17.66-1.41 1.41" />
-      <path d="m19.07 4.93-1.41 1.41" />
+      <path d="M12 2v2" /><path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" /><path d="M20 12h2" />
+      <path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />
     </svg>
   );
+}
 
-  // 月亮图标（暗色模式时显示）
-  const MoonIcon = () => (
-    <svg
-      aria-hidden="true"
-      width={iconSize}
-      height={iconSize}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
+function MoonIcon() {
+  return (
+    <svg aria-hidden width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
     </svg>
   );
+}
 
-  if (shouldReduceMotion) {
-    return (
-      <button
-        type="button"
-        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        onClick={handleClick}
-        className={`oai-button-ghost oai-button-sm ${className}`}
-        style={{
-          ...buttonStyles,
-          width: size,
-          height: size,
-          padding: 0,
-        }}
-        title={isDark ? "切换到亮色模式" : "切换到暗色模式"}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = hoverStyles.backgroundColor;
-          e.currentTarget.style.color = hoverStyles.color;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = "transparent";
-          e.currentTarget.style.color = "var(--oai-gray-600)";
-        }}
-      >
-        {isDark ? <MoonIcon /> : <SunIcon />}
-      </button>
-    );
-  }
+function MonitorIcon() {
+  return (
+    <svg aria-hidden width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+      <path d="M8 21h8" /><path d="M12 17v4" />
+    </svg>
+  );
+}
+
+const OPTIONS = [
+  { value: "light", label: "Light", Icon: SunIcon },
+  { value: "dark", label: "Dark", Icon: MoonIcon },
+  { value: "system", label: "System", Icon: MonitorIcon },
+];
+
+function currentIcon(resolvedTheme) {
+  return resolvedTheme === "dark" ? MoonIcon : SunIcon;
+}
+
+/**
+ * Theme dropdown: Light / Dark / System.
+ * Stores preference in localStorage via ThemeProvider.
+ */
+export function ThemeToggle({ theme, resolvedTheme, onSetTheme, className = "" }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const close = useCallback(() => setOpen(false), []);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) close();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open, close]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (e.key === "Escape") close(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, close]);
+
+  const ActiveIcon = currentIcon(resolvedTheme);
 
   return (
-    <motion.button
-      type="button"
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      onClick={handleClick}
-      className={`oai-button-ghost oai-button-sm ${className}`}
-      style={{
-        ...buttonStyles,
-        width: size,
-        height: size,
-        padding: 0,
-      }}
-      title={isDark ? "切换到亮色模式" : "切换到暗色模式"}
-      whileHover={{
-        backgroundColor: "var(--oai-gray-100)",
-        color: "var(--oai-black)",
-      }}
-      whileTap={{ scale: 0.95 }}
-      transition={{
-        type: "spring",
-        stiffness: 400,
-        damping: 25,
-      }}
-    >
-      <motion.div
-        key={isDark ? "moon" : "sun"}
-        initial={{ scale: 0.8, opacity: 0, rotate: -20 }}
-        animate={{ scale: 1, opacity: 1, rotate: 0 }}
-        exit={{ scale: 0.8, opacity: 0, rotate: 20 }}
-        transition={{
-          type: "spring",
-          stiffness: 400,
-          damping: 25,
-        }}
+    <div ref={ref} className={`relative ${className}`}>
+      <button
+        type="button"
+        aria-label="Theme"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center justify-center w-9 h-9 rounded-lg text-oai-gray-600 dark:text-oai-gray-400 hover:bg-oai-gray-100 dark:hover:bg-oai-gray-800 hover:text-oai-black dark:hover:text-white transition-colors"
       >
-        {isDark ? <MoonIcon /> : <SunIcon />}
-      </motion.div>
-    </motion.button>
+        <ActiveIcon />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] py-1 rounded-lg border border-oai-gray-200 dark:border-oai-gray-800 bg-white dark:bg-oai-gray-900 shadow-lg">
+          {OPTIONS.map(({ value, label, Icon }) => {
+            const active = theme === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => { onSetTheme(value); close(); }}
+                className={`flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+                  active
+                    ? "text-oai-black dark:text-white bg-oai-gray-100 dark:bg-oai-gray-800"
+                    : "text-oai-gray-600 dark:text-oai-gray-400 hover:bg-oai-gray-50 dark:hover:bg-oai-gray-800/60 hover:text-oai-black dark:hover:text-white"
+                }`}
+              >
+                <Icon />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

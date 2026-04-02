@@ -65,9 +65,16 @@ async function fetchSvg(path) {
   if (svgCache.has(path)) return svgCache.get(path);
   const resp = await fetch(`/clawd/${path}`);
   if (!resp.ok) return null;
-  const text = await resp.text();
-  svgCache.set(path, text);
-  return text;
+  const raw = await resp.text();
+  // Strip fixed width/height so SVG scales to container, keep viewBox
+  const result = raw.replace(/<svg([^>]*)>/, (_match, attrs) => {
+    const cleaned = attrs
+      .replace(/\s+width="[^"]*"/g, "")
+      .replace(/\s+height="[^"]*"/g, "");
+    return `<svg${cleaned} width="100%" height="100%">`;
+  });
+  svgCache.set(path, result);
+  return result;
 }
 
 /**
@@ -94,10 +101,26 @@ export function ClawdAnimated({ state = "idle-living", size = 48, className = ""
     return () => { cancelled = true; };
   }, [path]);
 
+  // Crop viewBox to actual content bbox so the character fills the container
+  useEffect(() => {
+    const svg = containerRef.current?.querySelector("svg");
+    if (!svg) return;
+    try {
+      const bbox = svg.getBBox();
+      if (bbox.width > 0 && bbox.height > 0) {
+        const pad = 2;
+        svg.setAttribute(
+          "viewBox",
+          `${bbox.x - pad} ${bbox.y - pad} ${bbox.width + pad * 2} ${bbox.height + pad * 2}`,
+        );
+      }
+    } catch {}
+  }, [svgHtml]);
+
   return (
     <div
       ref={containerRef}
-      className={className}
+      className={`clawd-animated ${className}`}
       style={{
         width: size,
         height: size,

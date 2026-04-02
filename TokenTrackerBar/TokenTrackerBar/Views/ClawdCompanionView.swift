@@ -413,29 +413,31 @@ struct ClawdCompanionView: View {
                 // MARK: Working Ultrathink — shake + sparks + steam + rainbow text
                 // =====================================================
                 case .workingUltrathink:
-                    let shakeX: CGFloat = sin(t * 42) * 0.3
-                    let shakeY: CGFloat = cos(t * 38) * 0.2
-                    let dx = shakeX
-                    let dy = shakeY
+                    // Match SVG: shake 0.15s ±0.3px ±0.5deg (smooth alternating)
+                    let shakePhase = sin(t / 0.15 * .pi)  // 0.15s period like CSS
+                    let dx: CGFloat = shakePhase * 0.3
+                    let dy: CGFloat = cos(t / 0.15 * .pi * 0.9) * 0.15
 
-                    // Vibrating shadow
-                    let shadowW: CGFloat = 9 + sin(t * 42) * 0.2
+                    // Shadow
+                    let shadowW: CGFloat = 9 + shakePhase * 0.2
                     context.fill(Path(r(3, 15, shadowW, 0.5, dx: dx)), with: .color(.black.opacity(0.12)))
 
+                    // Legs (static)
                     for lx: CGFloat in [3, 5, 9, 11] {
                         context.fill(Path(r(lx, 13, 1, 2)), with: .color(bodyColor))
                     }
 
+                    // Body
                     context.fill(Path(r(2, 6, 11, 7, dx: dx, dy: dy)), with: .color(bodyColor))
 
-                    // Left arm raised
+                    // Left arm
                     context.fill(Path(r(0, 9, 2, 2, dx: dx, dy: dy)), with: .color(bodyColor))
 
-                    // Right arm tapping chin fast
+                    // Right arm tapping chin (0.8s cycle like SVG)
                     let tapFastY: CGFloat = 7 + sin(t / 0.8 * .pi * 2) * 0.5
                     context.fill(Path(r(13, tapFastY, 2, 2, dx: dx, dy: dy)), with: .color(bodyColor))
 
-                    // Focus-blink eyes (2s cycle, squint at 74%)
+                    // Focus-blink eyes (2s cycle)
                     let focusT = (t / 2.0).truncatingRemainder(dividingBy: 1.0)
                     let isFocusBlink = focusT > 0.70 && focusT < 0.78
 
@@ -447,41 +449,57 @@ struct ClawdCompanionView: View {
                         context.fill(Path(r(10, 7, 1, 2, dx: dx, dy: dy)), with: .color(eyeColor))
                     }
 
-                    // Brain sparks (gold, rising)
-                    let sparkColor = Color(red: 1, green: 0.84, blue: 0) // #FFD700
+                    // Brain sparks (gold, 1.2s cycle matching SVG)
+                    let sparkColor = Color(red: 1, green: 0.84, blue: 0)
                     for i in 0..<4 {
-                        let spT = (t * 1.0 + Double(i) * 0.3).truncatingRemainder(dividingBy: 1.2) / 1.2
-                        let spRise = spT * 12
-                        let alpha = spT < 0.15 ? spT / 0.15 : (spT > 0.6 ? (1.0 - spT) / 0.4 : 1.0)
+                        let spT = (t + Double(i) * 0.3).truncatingRemainder(dividingBy: 1.2) / 1.2
+                        let spRise = spT * 3.0
+                        let spAlpha = spT < 0.15 ? spT / 0.15 : (spT > 0.6 ? max(0, (1.0 - spT) / 0.4) : 1.0)
                         let spX: CGFloat = [10, 6, 3, 8][i]
                         let spSize: CGFloat = 1.0 - CGFloat(spT) * 0.7
-                        context.fill(Path(r(spX, 2 - CGFloat(spRise), spSize, spSize, dx: dx)),
-                                     with: .color(sparkColor.opacity(alpha)))
+                        context.fill(Path(r(spX, 6 - CGFloat(spRise), spSize, spSize, dx: dx)),
+                                     with: .color(sparkColor.opacity(spAlpha)))
                     }
 
-                    // Steam puffs (grey, rising)
+                    // Steam puffs (2s cycle matching SVG)
                     for i in 0..<3 {
                         let stT = (t + Double(i) * 0.7).truncatingRemainder(dividingBy: 2.0) / 2.0
-                        let stRise = stT * 10
-                        let alpha = stT < 0.2 ? stT * 3 : (stT > 0.7 ? (1.0 - stT) / 0.3 : 0.6)
+                        let stRise = stT * 2.5
+                        let stAlpha = stT < 0.2 ? stT * 3 : (stT > 0.7 ? max(0, (1.0 - stT) / 0.3) : 0.6)
                         let stX: CGFloat = [5, 9, 7][i]
-                        let stSize: CGFloat = 1.5 + CGFloat(stT) * 1.0
-                        context.fill(Path(r(stX, 3 - CGFloat(stRise), stSize, stSize / 2, dx: dx)),
-                                     with: .color(.gray.opacity(alpha * 0.4)))
+                        let stSize: CGFloat = 0.8 + CGFloat(stT) * 0.7
+                        context.fill(Path(r(stX, 6 - CGFloat(stRise), stSize, stSize / 2, dx: dx)),
+                                     with: .color(.gray.opacity(stAlpha * 0.4)))
                     }
 
-                    // Rainbow "ultrathink" text (pulsing letters)
-                    let colors: [Color] = [.red, .orange, .yellow, .green, .blue, .purple,
-                                           .red, .orange, .green, .blue]
+                    // Rainbow "ultrathink" text — 1s pulse, 0.1s stagger per letter (matching SVG)
+                    let rainbowColors: [Color] = [
+                        Color(red: 1, green: 0.32, blue: 0.32),     // #FF5252
+                        Color(red: 1, green: 0.60, blue: 0),         // #FF9800
+                        Color(red: 1, green: 0.76, blue: 0.03),      // #FFC107
+                        Color(red: 0.30, green: 0.69, blue: 0.31),   // #4CAF50
+                        Color(red: 0.13, green: 0.59, blue: 0.95),   // #2196F3
+                        Color(red: 0.61, green: 0.15, blue: 0.69),   // #9C27B0
+                        Color(red: 1, green: 0.32, blue: 0.32),      // #FF5252
+                        Color(red: 1, green: 0.60, blue: 0),          // #FF9800
+                        Color(red: 0.30, green: 0.69, blue: 0.31),   // #4CAF50
+                        Color(red: 0.13, green: 0.59, blue: 0.95),   // #2196F3
+                    ]
                     let letters = Array("ultrathink")
+                    let textY: CGFloat = 1.5
+                    let charW: CGFloat = 5.8
+                    let totalW = CGFloat(letters.count) * charW
+                    let startX = (size.width - totalW) / 2
                     for (i, ch) in letters.enumerated() {
-                        let charT = (t + Double(i) * 0.1).truncatingRemainder(dividingBy: 1.0)
-                        let alpha = 0.15 + sin(charT * .pi) * 0.85
+                        // 1s period, ease-in-out via sin, 0.1s delay per letter
+                        let phase = (t + Double(i) * 0.1).truncatingRemainder(dividingBy: 1.0)
+                        let wave = sin(phase * .pi)  // 0→1→0 smooth
+                        let letterAlpha = 0.15 + wave * 0.85
                         context.draw(
                             Text(String(ch))
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .foregroundColor(colors[i].opacity(alpha)),
-                            at: CGPoint(x: (CGFloat(i) * 1.4 + 1) * s, y: (-4 - yBase) * s + yOff)
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .foregroundColor(rainbowColors[i].opacity(letterAlpha)),
+                            at: CGPoint(x: startX + CGFloat(i) * charW + charW / 2, y: textY)
                         )
                     }
 
@@ -831,7 +849,6 @@ struct ClawdCompanionView: View {
 
     /// All the fun states to show temporarily on tap
     private static let tapAnimations: [ClawdState] = [
-        .workingThinking,    // 思考 (摇摆+点下巴+泡泡)
         .workingUltrathink,  // 超级思考 (震颤+火花+彩虹)
         .workingTyping,      // 打字 (抖动+数据粒子)
         .disconnected,       // 找东西 (问号/感叹号)

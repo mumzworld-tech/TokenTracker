@@ -93,7 +93,7 @@ export default function App() {
       ? LeaderboardPage
       : DashboardPage;
 
-  const loadingShell = <div className="min-h-screen bg-[#050505]" />;
+  const loadingShell = <div className="min-h-screen bg-oai-white dark:bg-[#050505]" />;
 
   let content = null;
   if (normalizedPath === "/auth/callback" || normalizedPath === "/auth/native-callback") {

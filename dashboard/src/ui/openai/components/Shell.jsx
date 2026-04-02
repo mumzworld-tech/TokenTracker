@@ -80,7 +80,7 @@ export function Shell({
   hideHeader = false,
   hideFooter = false,
 }) {
-  const { resolvedTheme, toggleTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
 
   return (
     <div
@@ -92,7 +92,7 @@ export function Shell({
           <div className="flex-1 flex justify-center">{header}</div>
           <div className="flex items-center gap-3">
             <HeaderGithubStar />
-            <ThemeToggle theme={resolvedTheme} onToggle={toggleTheme} />
+            <ThemeToggle theme={theme} resolvedTheme={resolvedTheme} onSetTheme={setTheme} />
             <InsforgeUserHeaderControls />
           </div>
         </header>

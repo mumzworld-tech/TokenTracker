@@ -97,7 +97,12 @@ final class UpdateChecker {
         case .success(let release):
             let current = currentVersion()
             if compareVersions(current, release.tagVersion) == .orderedAscending {
-                promptUpdate(release: release, currentVersion: current)
+                if silent, let dmg = release.dmgAsset {
+                    // Silent auto-update: download and install without prompting
+                    startDownloadAndInstall(dmg)
+                } else {
+                    promptUpdate(release: release, currentVersion: current)
+                }
             } else {
                 finishUpdate()
                 if !silent {

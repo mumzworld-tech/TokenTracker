@@ -49,7 +49,7 @@ export function LeaderboardProfilePage({
   userId,
 }) {
   const location = useLocation();
-  const { resolvedTheme, toggleTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const leaderboardBaseUrl = useMemo(() => getLeaderboardBaseUrl(), []);
   const mockEnabled = isMockEnabled();
   const authTokenAllowed = signedIn && !sessionSoftExpired;
@@ -213,7 +213,7 @@ export function LeaderboardProfilePage({
             >
               {copy("leaderboard.profile.nav.back")}
             </Link>
-            <ThemeToggle theme={resolvedTheme} onToggle={toggleTheme} />
+            <ThemeToggle theme={theme} resolvedTheme={resolvedTheme} onSetTheme={setTheme} />
             <InsforgeUserHeaderControls />
           </div>
         </div>

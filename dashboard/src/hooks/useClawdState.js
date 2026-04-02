@@ -33,7 +33,7 @@ export function useClawdState({
     if (todayTokens === 0) return "sleeping";
     if (todayTokens < 50_000) return "idle-living";
     if (todayTokens < 200_000) return "idle-look";
-    if (todayTokens < 500_000) return "working-thinking";
+    if (todayTokens < 500_000) return "working-ultrathink";
     if (todayTokens < 2_000_000) return "working-typing";
     return "working-ultrathink";
   }, [todayTokens, isSyncing, hasError, isDisconnected]);

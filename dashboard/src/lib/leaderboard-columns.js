@@ -18,10 +18,10 @@ export const LEADERBOARD_TOKEN_COLUMNS = [
 export const LEADERBOARD_STICKY_RANK_PX = 72;
 
 export const LB_STICKY_TH_RANK =
-  "sticky left-0 z-40 w-[72px] min-w-[72px] max-w-[72px] border-r border-oai-gray-200 dark:border-oai-gray-800 bg-white dark:bg-oai-gray-950 px-4 py-4";
+  "sticky left-0 z-40 w-[72px] min-w-[72px] max-w-[72px] border-r border-oai-gray-200 dark:border-oai-gray-800 bg-white dark:bg-oai-gray-950 px-4 py-4 align-middle";
 
 export const LB_STICKY_TH_USER =
-  "sticky left-[72px] z-40 min-w-[140px] max-w-[min(180px,35vw)] border-r border-oai-gray-200 dark:border-oai-gray-800 bg-white dark:bg-oai-gray-950 px-4 py-4";
+  "sticky left-[72px] z-40 min-w-[140px] max-w-[min(180px,35vw)] border-r border-oai-gray-200 dark:border-oai-gray-800 bg-white dark:bg-oai-gray-950 px-4 py-4 align-middle";
 
 /** Second sticky column on profile page (Rank + Total; no User column in table) */
 export const LB_STICKY_TH_TOTAL =

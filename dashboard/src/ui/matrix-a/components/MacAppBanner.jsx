@@ -103,7 +103,7 @@ export function MacAppBanner({ todayTokens = 0, isSyncing = false }) {
       >
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0">
-            <ClawdAnimated state={clawdState} size={44} />
+            <ClawdAnimated state={clawdState} size={56} />
           </div>
 
           <div className="flex-1 min-w-0">

@@ -606,6 +606,12 @@ body {
     100% { background-position: -200% 0; }
   }
 
+  /* Clawd animated SVG: scale inner SVG to fill container */
+  .clawd-animated > svg {
+    width: 100%;
+    height: 100%;
+  }
+
   /* ========================================
      Dark Mode Animation Overrides
      ======================================== */

@@ -25,6 +25,7 @@ import { InsforgeUserHeaderControls } from "../components/InsforgeUserHeaderCont
 import { HeaderGithubStar } from "../ui/openai/components/HeaderGithubStar.jsx";
 import { LeaderboardAvatar } from "../components/LeaderboardAvatar.jsx";
 import { LeaderboardProviderColumnHeader } from "../components/LeaderboardProviderColumnHeader.jsx";
+import { LeaderboardSkeleton } from "../components/LeaderboardSkeleton.jsx";
 import { useTheme } from "../hooks/useTheme.js";
 import { ThemeToggle } from "../ui/foundation/ThemeToggle.jsx";
 import {
@@ -51,12 +52,30 @@ function leaderboardTokenCells(entry, isMe) {
     : "text-oai-gray-500 dark:text-oai-gray-400";
   const cellBg = isMe
     ? "bg-oai-brand-50 dark:bg-oai-brand-900/10"
-    : "bg-white dark:bg-oai-gray-950 ";
+    : "bg-white dark:bg-oai-gray-950 group-hover:bg-oai-gray-50 dark:group-hover:bg-oai-gray-900/60";
   return LEADERBOARD_TOKEN_COLUMNS.map((col) => (
-    <td key={col.key} className={cn("px-4 py-4 whitespace-nowrap", numCls, cellBg)}>
+    <td key={col.key} className={cn("px-4 py-4 whitespace-nowrap text-right tabular-nums", numCls, cellBg)}>
       {toDisplayNumber(entry?.[col.key])}
     </td>
   ));
+}
+
+const RANK_MEDAL = {
+  1: { text: "text-amber-600 dark:text-amber-400", badge: "bg-amber-50 dark:bg-amber-900/20" },
+  2: { text: "text-gray-500 dark:text-gray-300", badge: "bg-gray-50 dark:bg-gray-800/40" },
+  3: { text: "text-orange-700 dark:text-orange-400", badge: "bg-orange-50 dark:bg-orange-900/20" },
+};
+
+function RankCell({ rank, placeholder }) {
+  const medal = RANK_MEDAL[rank];
+  if (medal) {
+    return (
+      <span className={cn("inline-flex items-center justify-center h-7 w-7 rounded-full text-xs font-bold", medal.text, medal.badge)}>
+        {rank}
+      </span>
+    );
+  }
+  return <span className="inline-flex items-center justify-center h-7 w-7 text-sm">{rank ?? placeholder}</span>;
 }
 
 function normalizePeriod(value) {
@@ -113,7 +132,7 @@ export function LeaderboardPage({
   const navigate = useNavigate();
   const { openLoginModal } = useLoginModal();
   const { signedIn: cloudSignedIn, loading: authLoading } = useInsforgeAuth();
-  const { resolvedTheme, toggleTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const leaderboardBaseUrl = useMemo(() => getLeaderboardBaseUrl(), []);
   const mockEnabled = isMockEnabled();
   const authTokenAllowed = signedIn && !sessionSoftExpired;
@@ -285,11 +304,7 @@ export function LeaderboardPage({
   const hasEntries = Array.isArray(displayEntries) && displayEntries.length !== 0;
   let listBody = null;
   if (listState.loading) {
-    listBody = (
-      <div className="px-6 py-12 text-center">
-        <p className="text-sm text-oai-gray-500 dark:text-oai-gray-400">{copy("leaderboard.loading")}</p>
-      </div>
-    );
+    listBody = <LeaderboardSkeleton rows={PAGE_LIMIT} />;
   } else if (listState.error) {
     listBody = (
       <div className="px-6 py-12 text-center">
@@ -302,21 +317,23 @@ export function LeaderboardPage({
         <table className="min-w-max w-full text-left text-sm">
           <thead className="border-b border-oai-gray-200 dark:border-oai-gray-800">
             <tr>
-              <th className={cn(LB_STICKY_TH_RANK, "font-medium text-oai-gray-500 dark:text-oai-gray-400")}>
+              <th className={cn(LB_STICKY_TH_RANK, "text-[11px] font-semibold uppercase tracking-wider text-oai-gray-400 dark:text-oai-gray-500")}>
                 {copy("leaderboard.column.rank")}
               </th>
-              <th className={cn(LB_STICKY_TH_USER, "font-medium text-oai-gray-500 dark:text-oai-gray-400")}>
+              <th className={cn(LB_STICKY_TH_USER, "text-[11px] font-semibold uppercase tracking-wider text-oai-gray-400 dark:text-oai-gray-500")}>
                 {copy("leaderboard.column.user")}
               </th>
-              <th className="px-4 py-4 font-medium text-oai-gray-500 dark:text-oai-gray-400 whitespace-nowrap">
+              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-oai-gray-400 dark:text-oai-gray-500 whitespace-nowrap text-right align-middle">
                 {copy("leaderboard.column.total")}
               </th>
-              <th className="px-4 py-4 font-medium text-oai-gray-500 dark:text-oai-gray-400 whitespace-nowrap" title="Based on estimated API pricing, not actual billing">
+              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-oai-gray-400 dark:text-oai-gray-500 whitespace-nowrap text-right align-middle" title="Based on estimated API pricing, not actual billing">
                 Est. Cost
               </th>
               {LEADERBOARD_TOKEN_COLUMNS.map((col) => (
-                <th key={col.key} className="px-4 py-4 font-medium text-oai-gray-500 dark:text-oai-gray-400 whitespace-nowrap">
-                  <LeaderboardProviderColumnHeader iconSrc={col.icon} label={copy(col.copyKey)} />
+                <th key={col.key} className="px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-oai-gray-400 dark:text-oai-gray-500 whitespace-nowrap align-middle">
+                  <div className="flex items-center justify-end gap-2">
+                    <LeaderboardProviderColumnHeader iconSrc={col.icon} label={copy(col.copyKey)} />
+                  </div>
                 </th>
               ))}
             </tr>
@@ -341,7 +358,7 @@ export function LeaderboardPage({
                     className="border-y border-oai-brand-300/40 dark:border-oai-brand-500/30 bg-oai-brand-50 dark:bg-oai-brand-900/10 transition-colors"
                   >
                     <td className={cn(lbStickyTdRank(true), "font-semibold text-oai-brand-600 dark:text-oai-brand-400")}>
-                      {entry?.rank ?? placeholder}
+                      <RankCell rank={entry?.rank} placeholder={placeholder} />
                     </td>
                     <td className={lbStickyTdUser(true)}>
                       <div className="flex min-w-0 max-w-[min(160px,40vw)] items-center gap-4">
@@ -353,10 +370,10 @@ export function LeaderboardPage({
                         <span className="truncate font-semibold text-oai-black dark:text-oai-white">{name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-4 font-medium text-oai-black dark:text-oai-white whitespace-nowrap bg-oai-brand-50 dark:bg-oai-brand-900/10">
+                    <td className="px-4 py-4 font-medium text-oai-black dark:text-oai-white whitespace-nowrap text-right tabular-nums bg-oai-brand-50 dark:bg-oai-brand-900/10">
                       {toDisplayNumber(entry?.total_tokens)}
                     </td>
-                    <td className="px-4 py-4 font-medium text-oai-brand-600 dark:text-oai-brand-400 whitespace-nowrap bg-oai-brand-50 dark:bg-oai-brand-900/10" title="Based on estimated API pricing, not actual billing">
+                    <td className="px-4 py-4 font-medium text-oai-brand-600 dark:text-oai-brand-400 whitespace-nowrap text-right tabular-nums bg-oai-brand-50 dark:bg-oai-brand-900/10" title="Based on estimated API pricing, not actual billing">
                       {formatCost(entry?.estimated_cost_usd)}
                     </td>
                     {leaderboardTokenCells(entry, true)}
@@ -370,7 +387,7 @@ export function LeaderboardPage({
                   className="group transition-colors"
                 >
                   <td className={cn(lbStickyTdRank(false), "font-medium text-oai-gray-500 dark:text-oai-gray-400")}>
-                    {entry?.rank ?? placeholder}
+                    <RankCell rank={entry?.rank} placeholder={placeholder} />
                   </td>
                   <td className={lbStickyTdUser(false)}>
                     <div className="flex min-w-0 max-w-[min(160px,40vw)] items-center gap-4">
@@ -382,10 +399,10 @@ export function LeaderboardPage({
                       <span className="truncate font-medium text-oai-gray-800 dark:text-oai-gray-200">{name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-oai-gray-700 dark:text-oai-gray-300 whitespace-nowrap bg-white dark:bg-oai-gray-950 ">
+                  <td className="px-4 py-4 font-semibold text-oai-gray-800 dark:text-oai-gray-200 whitespace-nowrap text-right tabular-nums bg-white dark:bg-oai-gray-950 group-hover:bg-oai-gray-50 dark:group-hover:bg-oai-gray-900/60">
                     {toDisplayNumber(entry?.total_tokens)}
                   </td>
-                  <td className="px-4 py-4 text-oai-gray-500 dark:text-oai-gray-400 whitespace-nowrap bg-white dark:bg-oai-gray-950 " title="Based on estimated API pricing, not actual billing">
+                  <td className="px-4 py-4 text-oai-gray-500 dark:text-oai-gray-400 whitespace-nowrap text-right tabular-nums bg-white dark:bg-oai-gray-950 group-hover:bg-oai-gray-50 dark:group-hover:bg-oai-gray-900/60" title="Based on estimated API pricing, not actual billing">
                     {formatCost(entry?.estimated_cost_usd)}
                   </td>
                   {leaderboardTokenCells(entry, false)}
@@ -460,7 +477,7 @@ export function LeaderboardPage({
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <ThemeToggle theme={resolvedTheme} onToggle={toggleTheme} />
+            <ThemeToggle theme={theme} resolvedTheme={resolvedTheme} onSetTheme={setTheme} />
             <Link
               to={getDashboardEntryPath()}
               className={cn(
@@ -477,9 +494,9 @@ export function LeaderboardPage({
         </div>
       </header>
 
-      <main className="flex-1 py-12 sm:py-16">
+      <main className="flex-1 pt-8 sm:pt-10 pb-12 sm:pb-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
             <div>
               <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-oai-black dark:text-white mb-3">
                 {copy("leaderboard.title")}

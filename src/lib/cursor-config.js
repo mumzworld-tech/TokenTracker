@@ -45,7 +45,7 @@ function extractCursorSessionToken({ home } = {}) {
   try {
     jwt = cp
       .execSync(
-        `sqlite3 -readonly "${stateDbPath}" "SELECT value FROM ItemTable WHERE key = 'cursorAuth/accessToken';"`,
+        `sqlite3 "${stateDbPath}" "SELECT value FROM ItemTable WHERE key = 'cursorAuth/accessToken';"`,
         { encoding: "utf8", timeout: 5000, stdio: ["pipe", "pipe", "pipe"] },
       )
       .trim();

@@ -154,13 +154,14 @@ final class DashboardWindowController: NSObject, NSWindowDelegate, WKNavigationD
 
     private func dismissLoadingOverlay() {
         guard let overlay = loadingOverlay else { return }
+        // Enable webview background BEFORE fade so it's already painting
+        webView?.setValue(true, forKey: "drawsBackground")
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.3
             overlay.animator().alphaValue = 0
         } completionHandler: { [weak self] in
             overlay.removeFromSuperview()
             self?.loadingOverlay = nil
-            self?.webView?.setValue(true, forKey: "drawsBackground")
         }
     }
 
@@ -273,7 +274,14 @@ final class DashboardWindowController: NSObject, NSWindowDelegate, WKNavigationD
             .replacingOccurrences(of: "\n", with: " ")
         let js = "document.documentElement.classList.add('native-app');var s=document.createElement('style');s.textContent='\(escapedCSS)';document.head.appendChild(s);"
         webView.evaluateJavaScript(js)
-        dismissLoadingOverlay()
+
+        // Wait for next animation frame so the page has actually painted before dismissing overlay
+        let waitForPaint = "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))).then(() => 'ready')"
+        webView.evaluateJavaScript(waitForPaint) { [weak self] _, _ in
+            DispatchQueue.main.async {
+                self?.dismissLoadingOverlay()
+            }
+        }
     }
 
     func webView(
