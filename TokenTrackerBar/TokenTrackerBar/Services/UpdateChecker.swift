@@ -13,8 +13,8 @@ final class UpdateChecker {
     private(set) var statusText: String? = nil
     private(set) var isBusy = false
 
-    /// Download progress tracking
-    private var progressTimer: Timer?
+    /// Retain delegate until download completes (URLSession holds weak ref only)
+    private var activeDownloadDelegate: DownloadProgressDelegate?
 
     /// Cached app icon for alerts (capture before activationPolicy changes)
     private lazy var appIcon: NSImage? = NSApp.applicationIconImage
@@ -160,16 +160,13 @@ final class UpdateChecker {
         alert.addButton(withTitle: release.dmgAsset != nil ? "Download & Install" : "View on GitHub")
         alert.addButton(withTitle: "Later")
 
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        let response = alert.runModal()
-        NSApp.setActivationPolicy(.accessory)
-
-        if response == .alertFirstButtonReturn {
-            if let dmg = release.dmgAsset {
-                startDownloadAndInstall(dmg)
-            } else if let url = URL(string: release.html_url) {
-                NSWorkspace.shared.open(url)
+        presentAlert(alert) { response in
+            if response == .alertFirstButtonReturn {
+                if let dmg = release.dmgAsset {
+                    self.startDownloadAndInstall(dmg)
+                } else if let url = URL(string: release.html_url) {
+                    NSWorkspace.shared.open(url)
+                }
             }
         }
     }
@@ -196,34 +193,43 @@ final class UpdateChecker {
 
         let downloadsDir = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        let destPath = downloadsDir.appendingPathComponent(asset.name).path
+        let destURL = downloadsDir.appendingPathComponent(asset.name)
 
-        // Start polling file size for progress
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                let attrs = try? FileManager.default.attributesOfItem(atPath: destPath)
-                let received = (attrs?[.size] as? Int64) ?? 0
-                if totalSize > 0 {
-                    let pct = min(Int(Double(received) / Double(totalSize) * 100), 99)
-                    let receivedMB = Double(received) / 1_048_576
-                    self.statusText = "Downloading \(pct)% (\(String(format: "%.0f", receivedMB))/\(String(format: "%.0f", totalMB)) MB)"
-                }
-            }
+        if FileManager.default.fileExists(atPath: destURL.path) {
+            try? FileManager.default.removeItem(at: destURL)
         }
 
-        Task.detached { [self] in
-            let result: Result<URL, Error>
-            do {
-                result = .success(try await self.downloadViaURLSession(from: asset.browser_download_url, fileName: asset.name))
-            } catch {
-                result = .failure(error)
-            }
+        guard let url = URL(string: asset.browser_download_url) else {
+            finishUpdate()
+            showAlert(
+                title: "Download Failed",
+                message: "Invalid download URL.\n\nYou can download manually from the Releases page.",
+                style: .warning,
+                showReleasePage: true
+            )
+            return
+        }
 
-            await MainActor.run {
-                self.progressTimer?.invalidate()
-                self.progressTimer = nil
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 60
+        config.timeoutIntervalForResource = 900
 
+        let delegate = DownloadProgressDelegate(
+            destURL: destURL,
+            onProgress: { [weak self] received, expected in
+                guard let self else { return }
+                let denom = expected > 0 ? expected : totalSize
+                guard denom > 0 else {
+                    self.statusText = "Downloading…"
+                    return
+                }
+                let pct = min(Int(Double(received) / Double(denom) * 100), 99)
+                let receivedMB = Double(received) / 1_048_576
+                self.statusText = "Downloading \(pct)% (\(String(format: "%.0f", receivedMB))/\(String(format: "%.0f", totalMB)) MB)"
+            },
+            onComplete: { [weak self] result in
+                guard let self else { return }
+                self.activeDownloadDelegate = nil
                 switch result {
                 case .success(let dmgURL):
                     self.statusText = "Installing..."
@@ -238,32 +244,11 @@ final class UpdateChecker {
                     )
                 }
             }
-        }
-    }
+        )
+        activeDownloadDelegate = delegate
 
-    nonisolated private func downloadViaURLSession(from urlString: String, fileName: String) async throws -> URL {
-        guard let url = URL(string: urlString) else { throw UpdateError.downloadFailed }
-
-        let downloadsDir = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
-            ?? FileManager.default.temporaryDirectory
-        let destURL = downloadsDir.appendingPathComponent(fileName)
-
-        if FileManager.default.fileExists(atPath: destURL.path) {
-            try FileManager.default.removeItem(at: destURL)
-        }
-
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 60
-        config.timeoutIntervalForResource = 900
-        let session = URLSession(configuration: config)
-
-        let (tempURL, response) = try await session.download(from: url)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw UpdateError.downloadFailed
-        }
-
-        try FileManager.default.moveItem(at: tempURL, to: destURL)
-        return destURL
+        let session = URLSession(configuration: config, delegate: delegate, delegateQueue: OperationQueue.main)
+        delegate.startDownload(session: session, url: url)
     }
 
     private func performInstallAsync(_ dmgURL: URL) {
@@ -375,15 +360,124 @@ final class UpdateChecker {
         } else {
             alert.addButton(withTitle: "OK")
         }
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        let response = alert.runModal()
-        NSApp.setActivationPolicy(.accessory)
-
-        if showReleasePage && response == .alertFirstButtonReturn {
-            if let url = URL(string: releaseURL) {
-                NSWorkspace.shared.open(url)
+        presentAlert(alert) { response in
+            if showReleasePage && response == .alertFirstButtonReturn {
+                if let url = URL(string: self.releaseURL) {
+                    NSWorkspace.shared.open(url)
+                }
             }
+        }
+    }
+
+    /// 更新提示必须压过菜单栏 Popover（NSPanel）和仪表盘；仅用 sheet 仍可能被 Popover 挡住，故统一 `runModal` 并把模态窗提到高层级。
+    private func presentAlert(_ alert: NSAlert, completion: @escaping (NSApplication.ModalResponse) -> Void) {
+        NSApp.setActivationPolicy(.regular)
+        StatusBarController.prepareForSystemAlert()
+        NSRunningApplication.current.activate(options: [.activateIgnoringOtherApps, .activateAllWindows])
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.unhide(nil)
+
+        if let dash = DashboardWindowController.shared.windowForSheet {
+            dash.makeKeyAndOrderFront(nil)
+        }
+
+        var bumpTimer: Timer?
+        let bumpAttempts = BumpAttempts()
+        bumpTimer = Timer(timeInterval: 0.02, repeats: true) { t in
+            bumpAttempts.count += 1
+            if bumpAttempts.count > 250 {
+                t.invalidate()
+                return
+            }
+            guard let modal = NSApp.modalWindow else { return }
+            modal.level = .popUpMenu
+            modal.orderFrontRegardless()
+            t.invalidate()
+        }
+        if let timer = bumpTimer {
+            RunLoop.current.add(timer, forMode: .common)
+            RunLoop.current.add(timer, forMode: .modalPanel)
+        }
+
+        let response = alert.runModal()
+        bumpTimer?.invalidate()
+        NSApp.setActivationPolicy(.accessory)
+        completion(response)
+    }
+
+    private final class BumpAttempts {
+        var count = 0
+    }
+
+    /// Uses `URLSessionDownloadDelegate` so progress reflects bytes written to the temp file.
+    /// The previous implementation polled the final `~/Downloads/...` path, but `URLSession.download`
+    /// only writes there after completion, so the percentage stayed at 0%.
+    private final class DownloadProgressDelegate: NSObject, URLSessionDownloadDelegate {
+        private let destURL: URL
+        private let onProgress: (Int64, Int64) -> Void
+        private let onComplete: (Result<URL, Error>) -> Void
+        private var session: URLSession?
+        private var completionCalled = false
+
+        init(
+            destURL: URL,
+            onProgress: @escaping (Int64, Int64) -> Void,
+            onComplete: @escaping (Result<URL, Error>) -> Void
+        ) {
+            self.destURL = destURL
+            self.onProgress = onProgress
+            self.onComplete = onComplete
+        }
+
+        func startDownload(session: URLSession, url: URL) {
+            self.session = session
+            session.downloadTask(with: url).resume()
+        }
+
+        func urlSession(
+            _ session: URLSession,
+            downloadTask: URLSessionDownloadTask,
+            didWriteData bytesWritten: Int64,
+            totalBytesWritten: Int64,
+            totalBytesExpectedToWrite: Int64
+        ) {
+            onProgress(totalBytesWritten, totalBytesExpectedToWrite)
+        }
+
+        func urlSession(
+            _ session: URLSession,
+            downloadTask: URLSessionDownloadTask,
+            didFinishDownloadingTo location: URL
+        ) {
+            guard let http = downloadTask.response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                completeOnce(.failure(UpdateError.downloadFailed))
+                return
+            }
+            do {
+                if FileManager.default.fileExists(atPath: destURL.path) {
+                    try FileManager.default.removeItem(at: destURL)
+                }
+                try FileManager.default.moveItem(at: location, to: destURL)
+                completeOnce(.success(destURL))
+            } catch {
+                completeOnce(.failure(error))
+            }
+        }
+
+        func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+            if let error {
+                if !completionCalled {
+                    completeOnce(.failure(error))
+                }
+            }
+        }
+
+        private func completeOnce(_ result: Result<URL, Error>) {
+            guard !completionCalled else { return }
+            completionCalled = true
+            session?.finishTasksAndInvalidate()
+            session = nil
+            onComplete(result)
         }
     }
 

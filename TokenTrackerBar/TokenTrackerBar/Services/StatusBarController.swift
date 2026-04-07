@@ -5,6 +5,13 @@ import SwiftUI
 @MainActor
 final class StatusBarController: NSObject {
 
+    private static weak var instance: StatusBarController?
+
+    /// 在显示 `NSAlert` / sheet 前调用：收起菜单栏 Popover，否则其 `NSPanel` 常会盖住更新提示。
+    static func prepareForSystemAlert() {
+        instance?.closePopoverForModalAlert()
+    }
+
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let popover = NSPopover()
     private let viewModel: DashboardViewModel
@@ -35,10 +42,18 @@ final class StatusBarController: NSObject {
         self.launchAtLoginManager = launchAtLoginManager
         super.init()
 
+        Self.instance = self
+
         setupStatusItem()
         setupPopover()
         observeSyncState()
         observeNativeBridgeSettings()
+    }
+
+    private func closePopoverForModalAlert() {
+        if popover.isShown {
+            popover.performClose(nil)
+        }
     }
 
     /// React to setting changes pushed by the dashboard SettingsPage via NativeBridge.

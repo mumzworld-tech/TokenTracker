@@ -16,6 +16,9 @@ final class DashboardWindowController: NSObject, NSWindowDelegate, WKNavigationD
 
     static let shared = DashboardWindowController()
 
+    /// 供 `NSAlert` 等以 sheet 附着，避免 `runModal` 浮层被仪表盘或其它窗口压在下面。
+    var windowForSheet: NSWindow? { window }
+
     private var window: NSWindow?
     private var webView: WKWebView?
     private var loadingOverlay: NSView?
