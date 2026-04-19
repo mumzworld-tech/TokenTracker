@@ -151,39 +151,52 @@ export default async function (req: Request): Promise<Response> {
   // isolated across Safari / Chrome / WKWebView, so the client asks for a new
   // token on every environment — if we created a fresh device_id each time,
   // `tokentracker_hourly` ends up with the same logical bucket written under
-  // many device_ids, and leaderboard SUM double-counts. Keeping a single
+  // many device_ids, and leaderboard SUM would double-count. Keeping a single
   // device_id per logical device means every sync upserts onto the same row.
-  const { data: existingDevice } = await dbClient.database
+  //
+  // Concurrency: two parallel calls (tab + webview on first login) must not
+  // each INSERT a fresh row. The partial unique index
+  // `tokentracker_devices_active_unique` on (user_id, platform, device_name)
+  // WHERE revoked_at IS NULL guarantees one active row per logical device.
+  // We INSERT with ON CONFLICT DO NOTHING; if the insert loses the race it
+  // returns zero rows, and we SELECT to get the winner's id.
+  const newDeviceId = crypto.randomUUID();
+  const { data: insertedDevice } = await dbClient.database
     .from("tokentracker_devices")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("platform", platform)
-    .eq("device_name", deviceName)
-    .is("revoked_at", null)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .insert([{ id: newDeviceId, user_id: userId, device_name: deviceName, platform }], {
+      onConflict: "user_id,platform,device_name",
+      ignoreDuplicates: true,
+    })
+    .select("id");
 
-  const deviceId = (existingDevice as { id?: string } | null)?.id ?? crypto.randomUUID();
+  let deviceId: string;
+  if (Array.isArray(insertedDevice) && insertedDevice.length > 0) {
+    deviceId = (insertedDevice[0] as { id: string }).id;
+  } else {
+    const { data: winner, error: lookupErr } = await dbClient.database
+      .from("tokentracker_devices")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("platform", platform)
+      .eq("device_name", deviceName)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (lookupErr || !winner) {
+      return json(
+        { error: "Failed to issue device token", detail: lookupErr?.message || "device lookup failed" },
+        500,
+      );
+    }
+    deviceId = (winner as { id: string }).id;
+  }
+
   const tokenId = crypto.randomUUID();
   const token =
     crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
   const tokenHash = await sha256Hex(token);
   const createdAt = new Date().toISOString();
-
-  if (!existingDevice) {
-    const { error: deviceErr } = await dbClient.database.from("tokentracker_devices").insert([
-      {
-        id: deviceId,
-        user_id: userId,
-        device_name: deviceName,
-        platform,
-      },
-    ]);
-    if (deviceErr) {
-      return json({ error: "Failed to issue device token", detail: deviceErr.message }, 500);
-    }
-  }
 
   const { error: tokenErr } = await dbClient.database.from("tokentracker_device_tokens").insert([
     {
