@@ -60,9 +60,11 @@ jobs:
         run: |
           SECRET_JSON=$(aws secretsmanager get-secret-value --region ap-south-1 --secret-id "$ASM_NAME" --query SecretString --output text)
           echo "$SECRET_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"' > .env
-          echo "VITE_INSFORGE_BASE_URL=$(echo "$SECRET_JSON" | jq -r '.VITE_INSFORGE_BASE_URL')" >> $GITHUB_ENV
-          echo "VITE_INSFORGE_ANON_KEY=$(echo "$SECRET_JSON" | jq -r '.VITE_INSFORGE_ANON_KEY')" >> $GITHUB_ENV
-          cat .env
+          VITE_BASE=$(echo "$SECRET_JSON" | jq -r '.VITE_INSFORGE_BASE_URL')
+          VITE_ANON=$(echo "$SECRET_JSON" | jq -r '.VITE_INSFORGE_ANON_KEY')
+          echo "VITE_INSFORGE_BASE_URL=$VITE_BASE" >> $GITHUB_ENV
+          echo "VITE_INSFORGE_ANON_KEY=$VITE_ANON" >> $GITHUB_ENV
+          echo "Build args: VITE_INSFORGE_BASE_URL=$VITE_BASE"
 
       - name: Login to Amazon ECR
         id: login-ecr
