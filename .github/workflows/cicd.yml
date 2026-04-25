@@ -57,7 +57,7 @@ jobs:
           echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
       - name: Get AWS secrets From AWS Secret Manager
         env:
-          ASM_NAME: ${{ github.event.repository.name }}-${{ env.BRANCH_NAME }}
+          ASM_NAME: token-tracker-staging
         run: |
           SECRET_JSON=$(aws secretsmanager get-secret-value --region ap-south-1 --secret-id "$ASM_NAME" --query SecretString --output text)
           echo "$SECRET_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"' > .env
@@ -71,7 +71,7 @@ jobs:
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPO_NAME: tokentracker-main
+          ECR_REPO_NAME: token-tracker-staging
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG .
@@ -98,9 +98,9 @@ jobs:
           cd mumz-argocd-k8s-templates
           git checkout staging
           # cd ${{ github.event.repository.name }}/$(echo ${GITHUB_REF#refs/heads/})
-          cd ${{ github.event.repository.name }}
+          cd token-tracker
           ls -la
-          sed -i "s#amazonaws.com/${{ github.event.repository.name }}.*#amazonaws.com/${{ github.event.repository.name }}-${{ env.BRANCH_NAME }}:${{ github.sha }}#g" values.yaml
+          sed -i "s#amazonaws.com/token-tracker-staging.*#amazonaws.com/token-tracker-staging:${{ github.sha }}#g" values.yaml
           sed -i 's/gitCommitHash: "[^"]*"/gitCommitHash: "'${{ github.sha }}'"/' values.yaml
           git add values.yaml
           git status
