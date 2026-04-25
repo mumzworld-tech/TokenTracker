@@ -1,4 +1,4 @@
-name: Deploying CMS Service Production
+name: Deploying Token tracker Production
 
 on:
   push:
