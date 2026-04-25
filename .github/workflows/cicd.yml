@@ -3,7 +3,6 @@ name: Deploying Token tracker Production
 on:
   push:
     branches:
-      - preprod
       - main
   pull_request:
     types: [closed]
