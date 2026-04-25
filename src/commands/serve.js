@@ -169,6 +169,7 @@ function findPidOnPort(port) {
 }
 
 async function ensurePortFree(port) {
+  if (process.env.KUBERNETES_SERVICE_HOST) return;
   const pids = findPidOnPort(port);
   if (pids.length === 0) return;
 
