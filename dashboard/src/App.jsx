@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo } from "react";
+import React, { Suspense, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -8,6 +8,7 @@ import { useInsforgeAuth } from "./contexts/InsforgeAuthContext.jsx";
 import { LoginModalProvider } from "./contexts/LoginModalContext.jsx";
 import { LoginModal } from "./components/LoginModal.jsx";
 import { getBackendBaseUrl } from "./lib/config";
+import { setCurrentAccessToken } from "./lib/api";
 import { isMockEnabled } from "./lib/mock-data";
 import { isScreenshotModeEnabled } from "./lib/screenshot-mode";
 import { useCloudUsageSync } from "./hooks/use-cloud-usage-sync";
@@ -97,6 +98,14 @@ export default function App() {
       name: insforge.displayName || "",
       userId: insforge.user?.id || null,
     };
+  }, [insforge, cloudAuthSignedIn]);
+
+  useEffect(() => {
+    if (insforge.enabled && cloudAuthSignedIn) {
+      insforge.getAccessToken().then((t) => setCurrentAccessToken(t || null));
+    } else {
+      setCurrentAccessToken(null);
+    }
   }, [insforge, cloudAuthSignedIn]);
 
   let gate = isLocalMode || mockEnabled || screenshotMode ? "dashboard" : "landing";

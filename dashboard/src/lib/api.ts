@@ -29,14 +29,27 @@ const PATHS = {
 };
 
 async function fetchLocalJson(slug: string, params?: AnyRecord, options?: AnyRecord) {
-  const url = new URL(`/functions/${slug}`, window.location.origin);
+  const isLocalhost =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  const remoteUrl = isLocalhost ? "" : (getInsforgeRemoteUrl() || "");
+  const base = remoteUrl || window.location.origin;
+  const url = new URL(`/functions/${slug}`, base.startsWith("http") ? base : window.location.origin);
+  if (remoteUrl) url.pathname = `/functions/${slug}`;
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value != null && value !== "") url.searchParams.set(key, String(value));
     }
   }
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (remoteUrl) {
+    const anonKey = getInsforgeAnonKey();
+    if (anonKey) headers.apikey = anonKey;
+    const token = options?.accessToken || _currentAccessToken;
+    if (token && isValidJwtShape(token)) headers.Authorization = `Bearer ${token}`;
+  }
   const response = await fetch(url.toString(), {
-    headers: { Accept: "application/json" },
+    headers,
     cache: "no-store",
     ...options,
   });
@@ -47,6 +60,10 @@ async function fetchLocalJson(slug: string, params?: AnyRecord, options?: AnyRec
   }
   return response.json();
 }
+
+// Holds the current user's access token for cloud API calls.
+let _currentAccessToken: string | null = null;
+export function setCurrentAccessToken(token: string | null) { _currentAccessToken = token; }
 
 function buildTimeZoneParams({ timeZone, tzOffsetMinutes }: AnyRecord = {}) {
   const params: AnyRecord = {};
