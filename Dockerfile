@@ -16,5 +16,7 @@ COPY package.json ./
 COPY bin/ ./bin/
 COPY src/ ./src/
 COPY --from=dashboard-build /app/dashboard/dist ./dashboard/dist
+RUN mkdir -p /root/.tokentracker/tracker && echo '{}' > /root/.tokentracker/tracker/cursors.json
+ENV TOKENTRACKER_INSFORGE_BASE_URL=https://v3fpjv72.us-east.insforge.app
 EXPOSE 7680
 CMD ["node", "bin/tracker.js", "serve", "--no-open", "--no-sync"]
