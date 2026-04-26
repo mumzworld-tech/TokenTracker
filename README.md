@@ -1,7 +1,7 @@
  <div align="center">
 
 # Token Tracker
----
+
 ### Know exactly what you're spending on AI — across every CLI
 
 Auto-collect token counts from **10 AI coding tools**, aggregate them locally, and see real cost trends in a beautiful dashboard. No cloud account, no API keys, no setup — just one command.
@@ -12,6 +12,7 @@ Auto-collect token counts from **10 AI coding tools**, aggregate them locally, a
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/macOS-supported-lightgrey.svg)](https://www.apple.com/macos/)
 [![GitHub stars](https://img.shields.io/github/stars/mm7894215/TokenTracker?style=social)](https://github.com/mm7894215/TokenTracker/stargazers)
+
 <br/>
 
 <img src="https://raw.githubusercontent.com/mm7894215/tokentracker/main/docs/screenshots/dashboard-dark.png" alt="Token Tracker Dashboard" width="820" />
@@ -141,7 +142,7 @@ Upgrade with `brew upgrade --cask mm7894215/tokentracker/tokentracker`. The tap 
 | **Hermes Agent** | ✅ Auto | SQLite sessions table (`~/.hermes/state.db`) |
 | **GitHub Copilot** | ✅ Auto | OpenTelemetry file exporter (`COPILOT_OTEL_FILE_EXPORTER_PATH`) |
 | **Kimi Code** | ✅ Auto | Passive `wire.jsonl` reader (`~/.kimi/sessions/**/wire.jsonl`) |
---
+
 > **Do I need to install any plugin or hook manually?** No. `tokentracker` (or `tokentracker init`) handles everything on first run:
 > - **Hook-based** tools (Claude Code, Codex, Gemini, Every Code) — we write a SessionEnd hook or TOML notify entry into the tool's own config.
 > - **Plugin-based** tools (OpenCode, **OpenClaw**) — the plugin ships inside the npm package (`~/.tokentracker/app/openclaw-plugin/`). We link it via the tool's own CLI (`openclaw plugins install --link …` + `enable`). No download, no drag-and-drop.
