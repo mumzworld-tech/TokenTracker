@@ -12,6 +12,7 @@ import {
 } from "./mock-data";
 import { getInsforgeRemoteUrl, getInsforgeAnonKey, getOrCreateInsforgeClient } from "./insforge-config";
 import { isValidJwtShape } from "./auth-token";
+import { resolveInsforgeClientAccessToken } from "../contexts/InsforgeAuthContext";
 
 type AnyRecord = Record<string, any>;
 
@@ -41,7 +42,7 @@ async function fetchLocalJson(slug: string, params?: AnyRecord, options?: AnyRec
   try {
     const client = getOrCreateInsforgeClient();
     if (client) {
-      const token = await client.getAccessToken();
+      const token = await resolveInsforgeClientAccessToken(client);
       if (token && isValidJwtShape(token)) headers.Authorization = `Bearer ${token}`;
     }
   } catch {}
