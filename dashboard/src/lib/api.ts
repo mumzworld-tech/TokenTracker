@@ -10,7 +10,7 @@ import {
   getMockLeaderboard,
   isMockEnabled,
 } from "./mock-data";
-import { getInsforgeRemoteUrl, getInsforgeAnonKey } from "./insforge-config";
+import { getInsforgeRemoteUrl, getInsforgeAnonKey, getOrCreateInsforgeClient } from "./insforge-config";
 import { isValidJwtShape } from "./auth-token";
 
 type AnyRecord = Record<string, any>;
@@ -35,8 +35,18 @@ async function fetchLocalJson(slug: string, params?: AnyRecord, options?: AnyRec
       if (value != null && value !== "") url.searchParams.set(key, String(value));
     }
   }
+  const headers: Record<string, string> = { Accept: "application/json" };
+  const anonKey = getInsforgeAnonKey();
+  if (anonKey) headers.apikey = anonKey;
+  try {
+    const client = getOrCreateInsforgeClient();
+    if (client) {
+      const token = await client.getAccessToken();
+      if (token && isValidJwtShape(token)) headers.Authorization = `Bearer ${token}`;
+    }
+  } catch {}
   const response = await fetch(url.toString(), {
-    headers: { Accept: "application/json" },
+    headers,
     cache: "no-store",
     ...options,
   });
