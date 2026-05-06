@@ -22,12 +22,20 @@ http {\n\
     server {\n\
         listen 7680;\n\
         root /usr/share/nginx/html;\n\
+        set $tt_hash "";\n\
         location = /functions/tokentracker-ingest {\n\
-            js_content ingest.handle;\n\
+            js_set $tt_hash ingest.computeHash;\n\
+            proxy_pass INSFORGE_URL_PLACEHOLDER/functions/tokentracker-ingest;\n\
+            proxy_set_header Host INSFORGE_HOST_PLACEHOLDER;\n\
+            proxy_set_header Content-Type $http_content_type;\n\
+            proxy_set_header apikey $http_apikey;\n\
+            proxy_set_header x-tokentracker-device-token-hash $tt_hash;\n\
+            proxy_set_header Authorization "";\n\
+            proxy_set_header Accept $http_accept;\n\
         }\n\
         location /functions/ {\n\
             proxy_pass INSFORGE_URL_PLACEHOLDER/functions/;\n\
-            proxy_set_header Host $proxy_host;\n\
+            proxy_set_header Host INSFORGE_HOST_PLACEHOLDER;\n\
             proxy_set_header X-Real-IP $remote_addr;\n\
             proxy_set_header Cookie $http_cookie;\n\
             proxy_set_header Authorization $http_authorization;\n\
@@ -36,21 +44,10 @@ http {\n\
         }\n\
         location /api/ {\n\
             proxy_pass INSFORGE_URL_PLACEHOLDER/api/;\n\
-            proxy_set_header Host $proxy_host;\n\
+            proxy_set_header Host INSFORGE_HOST_PLACEHOLDER;\n\
             proxy_set_header X-Real-IP $remote_addr;\n\
             proxy_set_header Cookie $http_cookie;\n\
             proxy_set_header Authorization $http_authorization;\n\
-            proxy_pass_header Set-Cookie;\n\
-        }\n\
-        location /_ingest_backend {\n\
-            internal;\n\
-            proxy_pass INSFORGE_URL_PLACEHOLDER/functions/tokentracker-ingest;\n\
-            proxy_set_header Host INSFORGE_HOST_PLACEHOLDER;\n\
-            proxy_set_header X-Real-IP $remote_addr;\n\
-            proxy_set_header Content-Type $http_content_type;\n\
-            proxy_set_header apikey $http_apikey;\n\
-            proxy_set_header x-tokentracker-device-token-hash $http_x_tt_hash;\n\
-            proxy_set_header Authorization "";\n\
             proxy_pass_header Set-Cookie;\n\
         }\n\
         location / {\n\
@@ -58,18 +55,13 @@ http {\n\
         }\n\
     }\n\
 }\n' > /etc/nginx/nginx.conf && \
-    printf 'function handle(r) {\n\
+    printf 'function computeHash(r) {\n\
     var bearer = r.headersIn["Authorization"] || "";\n\
     var token = bearer.replace(/^Bearer\\s+/i, "");\n\
-    if (token && token.split(".").length !== 3) {\n\
-        var hex = require("crypto").createHash("sha256").update(token).digest("hex");\n\
-        r.headersOut["x-tt-hash"] = hex;\n\
-        r.internalRedirect("/_ingest_backend");\n\
-    } else {\n\
-        r.internalRedirect("/_ingest_backend");\n\
-    }\n\
+    if (!token || token.split(".").length === 3) return "";\n\
+    return require("crypto").createHash("sha256").update(token).digest("hex");\n\
 }\n\
-export default { handle };\n' > /etc/nginx/ingest.js && \
+export default { computeHash };\n' > /etc/nginx/ingest.js && \
     INSFORGE_HOST=$(echo "${VITE_INSFORGE_BASE_URL}" | sed 's|https://||;s|/.*||') && \
     sed -i "s|INSFORGE_URL_PLACEHOLDER|${VITE_INSFORGE_BASE_URL}|g" /etc/nginx/nginx.conf && \
     sed -i "s|INSFORGE_HOST_PLACEHOLDER|${INSFORGE_HOST}|g" /etc/nginx/nginx.conf
