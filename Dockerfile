@@ -13,7 +13,7 @@ RUN npm run build
 FROM nginx:alpine
 ARG VITE_INSFORGE_BASE_URL
 COPY --from=dashboard-build /app/dashboard/dist /usr/share/nginx/html
-RUN apk add --no-cache njs && \
+RUN apk add --no-cache nginx-module-njs && \
     printf 'load_module modules/ngx_http_js_module.so;\n\
 events { worker_connections 1024; }\n\
 http {\n\
