@@ -66,9 +66,10 @@ http {\n\
         headers: headers,\n\
         body: r.requestBuffer\n\
     });\n\
+    var body = await resp.text();\n\
     r.headersOut["Content-Type"] = "application/json";\n\
     r.headersOut["Access-Control-Allow-Origin"] = "*";\n\
-    r.return(resp.status, await resp.text());\n\
+    r.return(resp.status, body);\n\
 }\n\
 export default { handle };\n' > /etc/nginx/ingest.js && \
     sed -i "s|INSFORGE_URL_PLACEHOLDER|${VITE_INSFORGE_BASE_URL}|g" /etc/nginx/nginx.conf /etc/nginx/ingest.js
