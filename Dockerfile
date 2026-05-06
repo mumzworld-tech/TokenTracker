@@ -42,36 +42,36 @@ http {\n\
             proxy_set_header Authorization $http_authorization;\n\
             proxy_pass_header Set-Cookie;\n\
         }\n\
+        location /_ingest_backend {\n\
+            internal;\n\
+            proxy_pass INSFORGE_URL_PLACEHOLDER/functions/tokentracker-ingest;\n\
+            proxy_set_header Host INSFORGE_HOST_PLACEHOLDER;\n\
+            proxy_set_header X-Real-IP $remote_addr;\n\
+            proxy_set_header Content-Type $http_content_type;\n\
+            proxy_set_header apikey $http_apikey;\n\
+            proxy_set_header x-tokentracker-device-token-hash $http_x_tt_hash;\n\
+            proxy_set_header Authorization "";\n\
+            proxy_pass_header Set-Cookie;\n\
+        }\n\
         location / {\n\
             try_files $uri $uri/ /index.html;\n\
         }\n\
     }\n\
 }\n' > /etc/nginx/nginx.conf && \
-    printf 'async function handle(r) {\n\
+    printf 'function handle(r) {\n\
     var bearer = r.headersIn["Authorization"] || "";\n\
     var token = bearer.replace(/^Bearer\\s+/i, "");\n\
-    var hash = "";\n\
     if (token && token.split(".").length !== 3) {\n\
-        var data = new TextEncoder().encode(token);\n\
-        var buf = await crypto.subtle.digest("SHA-256", data);\n\
-        hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");\n\
+        var hex = require("crypto").createHash("sha256").update(token).digest("hex");\n\
+        r.headersOut["x-tt-hash"] = hex;\n\
+        r.internalRedirect("/_ingest_backend");\n\
+    } else {\n\
+        r.internalRedirect("/_ingest_backend");\n\
     }\n\
-    var headers = { "Content-Type": r.headersIn["Content-Type"] || "application/json" };\n\
-    var ak = r.headersIn["apikey"] || "";\n\
-    if (ak) headers["apikey"] = ak;\n\
-    if (hash) headers["x-tokentracker-device-token-hash"] = hash;\n\
-    if (token && token.split(".").length === 3) headers["Authorization"] = "Bearer " + token;\n\
-    var resp = await ngx.fetch("INSFORGE_URL_PLACEHOLDER/functions/tokentracker-ingest", {\n\
-        method: r.method,\n\
-        headers: headers,\n\
-        body: r.requestBuffer\n\
-    });\n\
-    var body = await resp.text();\n\
-    r.headersOut["Content-Type"] = "application/json";\n\
-    r.headersOut["Access-Control-Allow-Origin"] = "*";\n\
-    r.return(resp.status, body);\n\
 }\n\
 export default { handle };\n' > /etc/nginx/ingest.js && \
-    sed -i "s|INSFORGE_URL_PLACEHOLDER|${VITE_INSFORGE_BASE_URL}|g" /etc/nginx/nginx.conf /etc/nginx/ingest.js
+    INSFORGE_HOST=$(echo "${VITE_INSFORGE_BASE_URL}" | sed 's|https://||;s|/.*||') && \
+    sed -i "s|INSFORGE_URL_PLACEHOLDER|${VITE_INSFORGE_BASE_URL}|g" /etc/nginx/nginx.conf && \
+    sed -i "s|INSFORGE_HOST_PLACEHOLDER|${INSFORGE_HOST}|g" /etc/nginx/nginx.conf
 EXPOSE 7680
 CMD ["nginx", "-g", "daemon off;"]
