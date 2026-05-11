@@ -19,12 +19,11 @@ events { worker_connections 1024; }\n\
 http {\n\
     include /etc/nginx/mime.types;\n\
     js_import /etc/nginx/ingest.js;\n\
+    js_set $tt_hash ingest.computeHash;\n\
     server {\n\
         listen 7680;\n\
         root /usr/share/nginx/html;\n\
-        set $tt_hash "";\n\
         location = /functions/tokentracker-ingest {\n\
-            js_set $tt_hash ingest.computeHash;\n\
             proxy_pass INSFORGE_URL_PLACEHOLDER/functions/tokentracker-ingest;\n\
             proxy_set_header Host INSFORGE_HOST_PLACEHOLDER;\n\
             proxy_set_header Content-Type $http_content_type;\n\
