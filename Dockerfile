@@ -22,7 +22,7 @@ http {\n\
         resolver 8.8.8.8 valid=30s;\n\
         set $insforge_upstream INSFORGE_URL_PLACEHOLDER;\n\
         location /functions/ {\n\
-            proxy_pass $insforge_upstream/functions/;\n\
+            proxy_pass $insforge_upstream$request_uri;\n\
             proxy_set_header Host INSFORGE_HOST_PLACEHOLDER;\n\
             proxy_set_header X-Real-IP $remote_addr;\n\
             proxy_set_header Cookie $http_cookie;\n\
@@ -31,7 +31,7 @@ http {\n\
             proxy_pass_header Set-Cookie;\n\
         }\n\
         location /api/ {\n\
-            proxy_pass $insforge_upstream/api/;\n\
+            proxy_pass $insforge_upstream$request_uri;\n\
             proxy_set_header Host INSFORGE_HOST_PLACEHOLDER;\n\
             proxy_set_header X-Real-IP $remote_addr;\n\
             proxy_set_header Cookie $http_cookie;\n\
